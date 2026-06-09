@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVERBRIGHT CITY — Final Control Room</title>
+    <style>
+        :root {
+            --bg-color: #050508;
+            --panel-bg: #0c0d12;
+            --border-color: #1f2330;
+            --border-focus: #00f0ff;
+            --text-main: #d1d7e0;
+            --text-muted: #4e5569;
+            --accent-cyan: #00f0ff;
+            --accent-amber: #ffaa00;
+            --accent-red: #ff2a2a;
+            --accent-green: #00ff66;
+            --terminal-font: "Courier New", Courier, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--terminal-font);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        /* Ambient Control Room Screen Overlay (CRT Scanlines Effect) */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        /* 16:9 Command Display Monitor Frame */
+        .projector-screen {
+            width: 100vw;
+            height: 56.25vw; 
+            max-height: 100vh;
+            max-width: 177.78vh;
+            border: 2px solid #151922;
+            background-color: var(--panel-bg);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 3% 4%;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Industrial Corner Accents for Panels */
+        .tech-corner {
+            position: absolute; width: 12px; height: 12px; border-color: var(--text-muted); border-style: solid; pointer-events: none;
+        }
+        .tc-tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+        .tc-tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+        .tc-bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+        .tc-br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+
+        .screen-section { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: center; align-items: center; }
+        .active { display: flex !important; }
+
+        /* Command Top Bar Layout */
+        .control-header {
+            width: 100%;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .system-title { font-size: 2.5rem; font-weight: 900; letter-spacing: 0.4rem; color: var(--text-main); }
+        .sys-matrix-data { font-size: 0.75rem; color: var(--text-muted); text-align: right; line-height: 1.4; }
+
+        /* Modular Core Interface Grid blocks */
+        .module-frame {
+            border: 1px solid var(--border-color);
+            background: rgba(5, 5, 8, 0.6);
+            position: relative;
+            padding: 20px;
+        }
+        .module-tag {
+            position: absolute; top: -9px; left: 15px; background: var(--panel-bg);
+            padding: 0 8px; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 1px;
+        }
+
+        /* Step 1: Terminal Shell Login */
+        .login-terminal-box {
+            width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .login-input { 
+            background: #050508; border: 1px solid var(--border-color); padding: 15px; 
+            color: var(--accent-cyan); font-family: var(--terminal-font); font-size: 1.2rem; 
+            outline: none; letter-spacing: 4px; width: 100%; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .login-input:focus { border-color: var(--border-focus); box-shadow: 0 0 10px rgba(0,240,255,0.15); }
+        .login-btn { 
+            background: transparent; color: var(--text-main); border: 1px solid var(--border-color); 
+            padding: 12px; font-family: var(--terminal-font); font-size: 0.95rem; font-weight: bold; 
+            cursor: pointer; letter-spacing: 2px; transition: all 0.2s; 
+        }
+        .login-btn:hover { background: rgba(255,255,255,0.05); border-color: var(--text-main); }
+        .error-msg { color: var(--accent-red); font-size: 0.8rem; height: 20px; font-weight: bold; margin-top: 5px; }
+
+        /* Step 2: Encrypted Video Feed Feed UI */
+        .transmission-mainframe {
+            width: 100%; height: 100%; background: #020204;
+            display: flex; flex-direction: column; position: absolute; top:0; left:0;
+        }
+        .feed-header {
+            padding: 15px 30px; border-bottom: 1px solid rgba(255,42,42,0.2);
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,42,42,0.03);
+        }
+        .feed-title { color: var(--accent-red); font-weight: bold; letter-spacing: 3px; font-size: 0.9rem; }
+        .feed-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; position: relative; }
+        
+        /* Animated Audio Vectors for Mock Visual */
+        .oscilloscope { display: flex; align-items: center; gap: 6px; height: 60px; }
+        .oscilloscope span { width: 4px; height: 15px; background: var(--accent-red); animation: bounce 0.8s infinite ease-in-out; }
+        .oscilloscope span:nth-child(2) { animation-delay: 0.15s; }
+        .oscilloscope span:nth-child(3) { animation-delay: 0.3s; }
+        .oscilloscope span:nth-child(4) { animation-delay: 0.45s; }
+        .oscilloscope span:nth-child(5) { animation-delay: 0.6s; }
+        @keyframes bounce { 0%, 100% { height: 15px; } 50% { height: 60px; } }
+
+        .feed-progress-container { width: 100%; padding: 0 40px 30px 40px; }
+        .feed-bar-track { width: 100%; height: 6px; background: #111218; border: 1px solid #1f2330; }
+        .feed-bar-fill { height: 100%; width: 0%; background: var(--accent-red); }
+
+        /* Step 3: Command Center Main Voting Layout */
+        .dashboard-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; width: 100%; flex-grow: 1; gap: 30px; align-items: stretch; margin-bottom: 15px; }
+        .chart-side { display: flex; flex-direction: column; justify-content: center; gap: 35px; padding-right: 20px; }
+        .vote-label { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; letter-spacing: 2px; }
+        .vote-count-raw { font-size: 0.85rem; color: var(--text-muted); margin-left: 8px; font-weight: normal; }
+
+        /* Segmented Block Matrix Progress Bars */
+        .progress-track { width: 100%; height: 38px; background: #050508; border: 1px solid var(--border-color); padding: 4px; }
+        .progress-fill { 
+            height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.1, 0.8, 0.3, 1); 
+        }
+        #fillStay { 
+            background: repeating-linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan) 6px, transparent 6px, transparent 10px); 
+        }
+        #fillLeave { 
+            background: repeating-linear-gradient(90deg, var(--accent-amber), var(--accent-amber) 6px, transparent 6px, transparent 10px); 
+        }
+        
+        .control-side-panel { display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 25px; }
+        .timer-display { font-size: 5rem; font-weight: bold; color: var(--text-main); font-family: monospace; letter-spacing: -1px; text-shadow: 0 0 15px rgba(255,255,255,0.05); }
+        #qrcode { padding: 10px; background: #fff; border: 4px solid var(--border-color); }
+        .instruction-text { font-size: 1.3rem; font-weight: 900; letter-spacing: 6px; color: var(--text-main); text-align: center; }
+
+        /* Bottom Command System Status Bar */
+        .system-ticker-bar {
+            width: 100%; border-top: 1px solid var(--border-color); padding-top: 10px;
+            display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); letter-spacing: 1px;
+        }
+
+        /* Step 4: System Overrides (Endscreens) */
+        .verdict-screen { font-size: 3.8rem; font-weight: 900; letter-spacing: 0.6rem; text-align: center; width: 100%; padding: 30px; border: 1px solid; }
+        .verdict-stay { color: var(--accent-cyan); border-color: rgba(0,240,255,0.2); background: rgba(0,240,255,0.02); box-shadow: 0 0 30px rgba(0,240,255,0.05); }
+        .verdict-leave { color: var(--accent-amber); border-color: rgba(255,170,0,0.2); background: rgba(255,170,0,0.02); box-shadow: 0 0 30px rgba(255,170,0,0.05); }
+
+        /* --- IMMERSIVE PHONE TERMINAL VIEW --- */
+        .mobile-body { background: #050508; width: 100vw; height: 100vh; display: flex; flex-direction: column; padding: 35px 25px; justify-content: space-between; align-items: center; }
+        .mobile-mainframe { width: 100%; max-width: 360px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .mobile-header-block { border-bottom: 1px dashed var(--border-color); padding-bottom: 15px; text-align: center; }
+        .mobile-title { font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; margin-bottom: 4px; }
+        .mobile-subtitle { font-size: 0.7rem; letter-spacing: 2px; color: var(--accent-amber); font-weight: bold; }
+        .mobile-action-grid { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+        .vote-choice-btn { 
+            background: #0c0d12; border: 1px solid var(--border-color); padding: 25px; 
+            font-family: var(--terminal-font); font-size: 1.3rem; font-weight: bold; color: var(--text-main); 
+            cursor: pointer; transition: all 0.1s; text-align: center; letter-spacing: 3px; position: relative;
+        }
+        .vote-choice-btn::before { content: "[ "; color: var(--text-muted); }
+        .vote-choice-btn::after { content: " ]"; color: var(--text-muted); }
+        .vote-choice-btn:active { background: #151821; border-color: var(--text-main); }
+        #btnMobileStay:active { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+        #btnMobileLeave:active { color: var(--accent-amber); border-color: var(--accent-amber); }
+        .mobile-status-view { 
+            font-size: 0.9rem; text-align: center; color: var(--text-muted); line-height: 1.8; 
+            letter-spacing: 1px; border: 1px dashed var(--border-color); padding: 40px 20px; background: rgba(255,255,255,0.01);
+        }
+        .mobile-net-status {
+            text-align: center; font-size: 0.6rem; letter-spacing: 1px; margin-top: 10px; transition: color 0.3s;
+        }
+        .status-connected { color: var(--accent-green); }
+        .status-disconnected { color: var(--accent-red); }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+    <div id="projectorContainer" class="projector-screen">
+        <div class="tech-corner tc-tl"></div><div class="tech-corner tc-tr"></div>
+        <div class="tech-corner tc-bl"></div><div class="tech-corner tc-br"></div>
+        
+        <div id="sysHeader" class="control-header">
+            <div>
+                <h1 class="system-title">EVERBRIGHT CITY</h1>
+            </div>
+            <div class="sys-matrix-data">
+                NO_PAIN<br>
+                NO_WORRY<br>
+                NO_MEMORY_BURDEN
+            </div>
+        </div>
+
+        <div id="secLogin" class="screen-section active">
+            <div class="module-frame login-terminal-box">
+                <span class="module-tag">SECURE_GATEWAY</span>
+                <input type="password" id="passInput" class="login-input" placeholder="••••••••" autocomplete="off">
+                <button onclick="attemptLogin()" class="login-btn">EXECUTE OVERRIDE</button>
+                <div id="loginError" class="error-msg"></div>
+            </div>
+        </div>
+
+        <div id="secVideo" class="screen-section" style="position: relative; padding: 0;">
+            <div class="transmission-mainframe">
+                <div class="feed-header">
+                    <div class="feed-title">MESSAGE FROM MAYOR</div>
+                    <div style="font-size: 0.75rem; color: var(--accent-red);">STATUS: STREAMING...</div>
+                </div>
+                <div class="feed-body">
+                    <div class="oscilloscope">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div style="color: var(--accent-red); font-size: 1rem; letter-spacing: 2px;">RECEIVING AUDIO/VIDEO PAYLOAD...</div>
+                </div>
+                <div class="feed-progress-container">
+                    <div class="feed-bar-track"><div id="mockVideoFill" class="feed-bar-fill"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="secDashboard" class="screen-section" style="flex-direction: column; justify-content: flex-start; height: calc(100% - 80px);">
+            <div class="dashboard-grid">
+                
+                <div class="module-frame chart-side">
+                    <span class="module-tag">RESULTS</span>
+                    <div class="vote-bar-wrapper">
+                        <div class="vote-label">
+                            <span>STAY <span id="lblCountStay" class="vote-count-raw">(0)</span></span>
+                            <span id="txtStayPercent">0%</span>
+                        </div>
+                        <div class="progress-track"><div id="fillStay" class="progress-fill"></div></div>
+                    </div>
+                    <div class="vote-bar-wrapper">
+                        <div class="vote-label">
+                            <span>LEAVE <span id="lblCountLeave" class="vote-count-raw">(0)</span></span>
+                            <span id="txtLeavePercent">0%</span>
+                        </div>
+                        <div class="progress-track"><div id="fillLeave" class="progress-fill"></div></div>
+                    </div>
+                </div>
+                
+                <div class="module-frame control-side-panel">
+                    <span class="module-tag"></span>
+                    <div id="timer" class="timer-display">01:30</div>
+                    <div id="qrcode"></div>
+                    <div class="instruction-text">CHOOSE NOW</div>
+                </div>
+            </div>
+
+            <div class="system-ticker-bar"></div>
+        </div>
+
+        <div id="secVerdictStay" class="screen-section">
+            <div class="verdict-screen verdict-stay">GREAT, WELCOME..</div>
+        </div>
+        <div id="secVerdictLeave" class="screen-section">
+            <div class="verdict-screen verdict-leave">LOOK FORWARD TO YOUR NEXT VISIT</div>
+        </div>
+    </div>
+
+    <div id="mobileContainer" class="mobile-body" style="display: none;">
+        <div class="mobile-mainframe">
+            <div class="mobile-header-block">
+                <div class="mobile-title">EVERBRIGHT CITY</div>
+                <div class="mobile-subtitle">REMOTE VOTING TERMINAL</div>
+            </div>
+            
+            <div id="mobileVoteControls" class="mobile-action-grid">
+                <button id="btnMobileStay" onclick="submitPlayerVote('STAY')" class="vote-choice-btn">STAY</button>
+                <button id="btnMobileLeave" onclick="submitPlayerVote('LEAVE')" class="vote-choice-btn">LEAVE</button>
+            </div>
+
+            <div id="mobileStatusView" class="mobile-status-view" style="display: none;">
+                [ TRANSACTION SENT ]<br><br>
+                <span id="mobileCooldownTxt">AWAITING SYSTEM RESOLUTION...</span>
+            </div>
+            
+            <div>
+                <div id="mobileNetStatus" class="mobile-net-status status-disconnected">SYNCING WITH ARCHIVE...</div>
+                <div style="text-align: center; font-size: 0.55rem; color: var(--text-muted); letter-spacing: 1px; margin-top: 5px;">
+                    SECURE ACCESS LINK // NODE_ID_74B
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROOM_PASSWORD = "1234"; 
+        const COUNTDOWN_SECONDS = 90; 
+        const MOCK_VIDEO_DURATION = 10; 
+        
+        const generateSessionID = () => {
+            let id = localStorage.getItem('escape_room_session_id');
+            if (!id) {
+                id = 'room_' + Math.random().toString(36).substring(2, 11);
+                localStorage.setItem('escape_room_session_id', id);
+            }
+            return id;
+        };
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const isMobileView = urlParams.get('view') === 'mobile';
+        const sessionID = urlParams.get('room') || generateSessionID();
+        const mqttTopic = `escape/everbright-city/${sessionID}/votes`;
+
+        let voteData = { STAY: 0, LEAVE: 0 };
+        let timerInterval = null;
+        let cooldownInterval = null;
+        let mockPlayerInterval = null; 
+        let mqttClient = null;
+
+        if (isMobileView) {
+            document.getElementById('projectorContainer').remove();
+            document.getElementById('mobileContainer').style.display = 'flex';
+            initMobileContext();
+        } else {
+            document.getElementById('mobileContainer').remove();
+            initProjectorContext();
+        }
+
+        function initProjectorContext() {
+            // Correct public secure WebSocket port is 8884
+            mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+                keepalive: 60,
+                reconnectPeriod: 1000
+            });
+            
+            mqttClient.on('connect', () => { mqttClient.subscribe(mqttTopic); });
+            mqttClient.on('message', (topic, message) => {
+                const incomingVote = message.toString().trim();
+                if (voteData[incomingVote] !== undefined) {
+                    voteData[incomingVote]++;
+                    updateDashboardUI();
+                }
+            });
+
+            document.getElementById('passInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') attemptLogin();
+            });
+
+            const targetURL = `${window.location.href.split('?')[0]}?view=mobile&room=${sessionID}`;
+            new QRCode(document.getElementById("qrcode"), {
+                text: targetURL,
+                width: 160,
+                height: 160,
+                colorDark : "#050508",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+        }
+
+        function attemptLogin() {
+            const input = document.getElementById('passInput').value;
+            const errorElement = document.getElementById('loginError');
+            if (input === ROOM_PASSWORD) {
+                document.getElementById('sysHeader').style.display = 'none';
+                switchScreen('secVideo');
+                runMockVideoSequence(); 
+            } else {
+                errorElement.innerText = "CRITICAL ERROR: ACCESS DENIED. KEY INVALID.";
+                document.getElementById('passInput').value = "";
+            }
+        }
+
+        function runMockVideoSequence() {
+            let elapsed = 0;
+            const fill = document.getElementById('mockVideoFill');
+            
+            const handleSkipClick = () => {
+                document.getElementById('secVideo').removeEventListener('click', handleSkipClick);
+                clearInterval(mockPlayerInterval);
+                displayDashboardProtocol();
+            };
+            
+            document.getElementById('secVideo').addEventListener('click', handleSkipClick);
+
+            mockPlayerInterval = setInterval(() => {
+                elapsed += 0.1;
+                let percent = (elapsed / MOCK_VIDEO_DURATION) * 100;
+                if(fill) fill.style.width = percent + '%';
+                
+                if (elapsed >= MOCK_VIDEO_DURATION) {
+                    document.getElementById('secVideo').removeEventListener('click', handleSkipClick);
+                    clearInterval(mockPlayerInterval);
+                    displayDashboardProtocol();
+                }
+            }, 100);
+        }
+
+        function displayDashboardProtocol() {
+            document.getElementById('sysHeader').style.display = 'flex'; 
+            switchScreen('secDashboard');
+            startVoteCountdown(COUNTDOWN_SECONDS);
+        }
+
+        function updateDashboardUI() {
+            const total = voteData.STAY + voteData.LEAVE;
+            const stayPercent = total > 0 ? Math.round((voteData.STAY / total) * 100) : 0;
+            const leavePercent = total > 0 ? Math.round((voteData.LEAVE / total) * 100) : 0;
+
+            document.getElementById('lblCountStay').innerText = `(${voteData.STAY})`;
+            document.getElementById('lblCountLeave').innerText = `(${voteData.LEAVE})`;
+
+            document.getElementById('txtStayPercent').innerText = stayPercent + '%';
+            document.getElementById('fillStay').style.width = stayPercent + '%';
+            document.getElementById('txtLeavePercent').innerText = leavePercent + '%';
+            document.getElementById('fillLeave').style.width = leavePercent + '%';
+        }
+
+        function startVoteCountdown(seconds) {
+            let timeLeft = seconds;
+            const display = document.getElementById('timer');
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let mins = Math.floor(timeLeft / 60);
+                let secs = timeLeft % 60;
+                display.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    resolveSystemVerdict();
+                }
+                timeLeft--;
+            }, 1000);
+        }
+
+        function resolveSystemVerdict() {
+            if (mqttClient) mqttClient.end();
+            document.getElementById('sysHeader').style.display = 'none';
+
+            if (voteData.LEAVE > voteData.STAY) {
+                switchScreen('secVerdictLeave');
+            } else {
+                switchScreen('secVerdictStay');
+            }
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // --- HANDHELD CLIENT LOGIC ---
+        function initMobileContext() {
+            const statusIndicator = document.getElementById('mobileNetStatus');
+            
+            // Connect using standard clean 8884 setup
+            mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+                keepalive: 60,
+                reconnectPeriod: 1000
+            });
+            
+            mqttClient.on('connect', () => {
+                statusIndicator.innerText = "ONLINE // SYSTEM LINK STABLE";
+                statusIndicator.className = "mobile-net-status status-connected";
+            });
+
+            mqttClient.on('offline', () => {
+                statusIndicator.innerText = "LINK LOST // RECONNECTING...";
+                statusIndicator.className = "mobile-net-status status-disconnected";
+            });
+
+            mqttClient.on('error', () => {
+                statusIndicator.innerText = "SYNC LATENCY // RETRYING CONNECTION...";
+                statusIndicator.className = "mobile-net-status status-disconnected";
+            });
+            
+            const lastVoteTime = localStorage.getItem(`voted_time_${sessionID}`);
+            if (lastVoteTime) {
+                const elapsed = (Date.now() - parseInt(lastVoteTime)) / 1000;
+                if (elapsed < COUNTDOWN_SECONDS) {
+                    runMobileCooldown(Math.ceil(COUNTDOWN_SECONDS - elapsed));
+                }
+            }
+        }
+
+        function submitPlayerVote(choice) {
+            const lastVoteTime = localStorage.getItem(`voted_time_${sessionID}`);
+            if (lastVoteTime) {
+                const elapsed = (Date.now() - parseInt(lastVoteTime)) / 1000;
+                if (elapsed < COUNTDOWN_SECONDS) return; 
+            }
+
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(mqttTopic, choice, { qos: 1 }, () => {
+                    localStorage.setItem(`voted_time_${sessionID}`, Date.now().toString());
+                    runMobileCooldown(COUNTDOWN_SECONDS);
+                });
+            } else {
+                alert("LINK RETRY: Core sync latency. Tap option again.");
+            }
+        }
+
+        function runMobileCooldown(remainingSeconds) {
+            document.getElementById('mobileVoteControls').style.display = 'none';
+            document.getElementById('mobileStatusView').style.display = 'block';
+            
+            const txt = document.getElementById('mobileCooldownTxt');
+            
+            clearInterval(cooldownInterval);
+            cooldownInterval = setInterval(() => {
+                txt.innerHTML = `ACCESS LOCKED BY CHAIR OVERRIDE.<br>NEXT INPUT SLOT AVAILABLE IN: ${remainingSeconds}s`;
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(cooldownInterval);
+                    document.getElementById('mobileStatusView').style.display = 'none';
+                    document.getElementById('mobileVoteControls').style.display = 'flex';
+                }
+                remainingSeconds--;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
