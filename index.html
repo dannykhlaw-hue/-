@@ -465,7 +465,7 @@
             if (localStorage.getItem(`voted_${sessionID}`) === 'true') {
                 displayMobileLockoutView();
             }
-            mqttClient = mqtt.connect('wss://broker.hivemq.com:8044/mqtt');
+            mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
         }
 
         function submitPlayerVote(choice) {
