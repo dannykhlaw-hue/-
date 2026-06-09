@@ -339,7 +339,7 @@
         }
 
         function initProjectorContext() {
-            mqttClient = mqtt.connect('wss://broker.hivemq.com:8044/mqtt');
+            mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
             mqttClient.on('connect', () => { mqttClient.subscribe(mqttTopic); });
             mqttClient.on('message', (topic, message) => {
                 const incomingVote = message.toString();
